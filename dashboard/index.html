@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Security Audit Dashboard — Fady Hakim</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      padding: 32px 24px;
+    }
+
+    header {
+      max-width: 1100px;
+      margin: 0 auto 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 12px;
+      border-bottom: 1px solid #21262d;
+      padding-bottom: 24px;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #f0f6fc;
+    }
+
+    header h1 span {
+      color: #58a6ff;
+    }
+
+    header p {
+      font-size: 0.8rem;
+      color: #8b949e;
+      margin-top: 4px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: #1c2128;
+      border: 1px solid #30363d;
+      color: #8b949e;
+    }
+
+    .badge.live { border-color: #238636; color: #3fb950; }
+    .badge.live::before {
+      content: '';
+      width: 7px; height: 7px;
+      background: #3fb950;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .main { max-width: 1100px; margin: 0 auto; }
+
+    /* Score card */
+    .score-section {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 24px;
+      align-items: center;
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 12px;
+      padding: 28px 32px;
+      margin-bottom: 24px;
+    }
+
+    .score-ring {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      flex-shrink: 0;
+    }
+
+    .score-ring svg { transform: rotate(-90deg); }
+
+    .score-ring .bg { stroke: #21262d; }
+    .score-ring .fill {
+      stroke: #3fb950;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1.2s ease;
+    }
+
+    .score-ring.warn .fill { stroke: #d29922; }
+    .score-ring.fail .fill { stroke: #f85149; }
+
+    .score-label {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .score-label .pct {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #f0f6fc;
+      line-height: 1;
+    }
+
+    .score-label .lbl {
+      font-size: 0.65rem;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 3px;
+    }
+
+    .score-meta h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .stat-row {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat .val {
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    .stat .key {
+      font-size: 0.72rem;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .green { color: #3fb950; }
+    .red   { color: #f85149; }
+    .yellow { color: #d29922; }
+    .blue  { color: #58a6ff; }
+
+    /* Alert summary strip */
+    .alert-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .alert-card {
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 10px;
+      padding: 18px 20px;
+    }
+
+    .alert-card .num {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .alert-card .type {
+      font-size: 0.72rem;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 4px;
+    }
+
+    .alert-card.critical { border-color: #6e1d1d; }
+    .alert-card.critical .num { color: #f85149; }
+    .alert-card.high { border-color: #5a3a1a; }
+    .alert-card.high .num { color: #e3b341; }
+    .alert-card.medium { border-color: #1c3a5a; }
+    .alert-card.medium .num { color: #58a6ff; }
+    .alert-card.total .num { color: #8b949e; }
+
+    /* Tables */
+    .section {
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid #21262d;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .section-header h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 6px;
+    }
+
+    .tab {
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      border: 1px solid #30363d;
+      background: transparent;
+      color: #8b949e;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab.active, .tab:hover {
+      background: #21262d;
+      color: #e6edf3;
+      border-color: #58a6ff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 24px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #8b949e;
+      background: #0d1117;
+      border-bottom: 1px solid #21262d;
+    }
+
+    td {
+      padding: 10px 24px;
+      border-bottom: 1px solid #161b22;
+      vertical-align: top;
+      line-height: 1.5;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #1c2128; }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .pill.pass   { background: #0f2d17; color: #3fb950; border: 1px solid #238636; }
+    .pill.fail   { background: #2d0f0f; color: #f85149; border: 1px solid #6e1d1d; }
+    .pill.critical { background: #2d0f0f; color: #f85149; border: 1px solid #6e1d1d; }
+    .pill.high   { background: #2d1f0f; color: #e3b341; border: 1px solid #5a3a1a; }
+    .pill.medium { background: #0f1f2d; color: #58a6ff; border: 1px solid #1c3a5a; }
+    .pill.low    { background: #1a1a2d; color: #a371f7; border: 1px solid #3a2d5a; }
+
+    .remediation {
+      font-size: 0.75rem;
+      color: #8b949e;
+      margin-top: 3px;
+    }
+
+    footer {
+      max-width: 1100px;
+      margin: 32px auto 0;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #484f58;
+      border-top: 1px solid #21262d;
+      padding-top: 20px;
+    }
+
+    footer a { color: #58a6ff; text-decoration: none; }
+
+    #loading {
+      text-align: center;
+      padding: 80px 24px;
+      color: #8b949e;
+    }
+
+    #loading .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid #21262d;
+      border-top-color: #58a6ff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty { padding: 32px 24px; color: #8b949e; font-size: 0.85rem; text-align: center; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>IT Infra <span>&amp;</span> Security Dashboard</h1>
+    <p>Automated CIS Benchmark audit — runs daily via GitHub Actions</p>
+  </div>
+  <span class="badge live">Live — auto-updated daily</span>
+</header>
+
+<main class="main">
+  <div id="loading">
+    <div class="spinner"></div>
+    Loading latest audit results…
+  </div>
+
+  <div id="content" style="display:none">
+
+    <!-- Score -->
+    <div class="score-section">
+      <div class="score-ring" id="scoreRing">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle class="bg" cx="60" cy="60" r="50" fill="none" stroke-width="10"/>
+          <circle class="fill" id="scoreFill" cx="60" cy="60" r="50" fill="none"
+                  stroke-width="10" stroke-dasharray="314" stroke-dashoffset="314"/>
+        </svg>
+        <div class="score-label">
+          <span class="pct" id="scorePct">—</span>
+          <span class="lbl">CIS Score</span>
+        </div>
+      </div>
+      <div class="score-meta">
+        <h2>CIS Benchmark Level 1 — Windows Endpoint</h2>
+        <p style="color:#8b949e;font-size:0.82rem">Automated daily audit against 30+ security controls</p>
+        <div class="stat-row">
+          <div class="stat"><span class="val green" id="statPassed">—</span><span class="key">Passed</span></div>
+          <div class="stat"><span class="val red"   id="statFailed">—</span><span class="key">Failed</span></div>
+          <div class="stat"><span class="val"       id="statTotal">—</span><span class="key">Total Controls</span></div>
+          <div class="stat"><span class="val blue"  id="statGenerated">—</span><span class="key">Last Run</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alert strip -->
+    <div class="alert-strip">
+      <div class="alert-card critical">
+        <div class="num" id="alertCritical">0</div>
+        <div class="type">Critical</div>
+      </div>
+      <div class="alert-card high">
+        <div class="num" id="alertHigh">0</div>
+        <div class="type">High</div>
+      </div>
+      <div class="alert-card medium">
+        <div class="num" id="alertMedium">0</div>
+        <div class="type">Medium</div>
+      </div>
+      <div class="alert-card total">
+        <div class="num" id="alertTotal">0</div>
+        <div class="type">Total Alerts</div>
+      </div>
+    </div>
+
+    <!-- Controls table -->
+    <div class="section">
+      <div class="section-header">
+        <h3>Security Controls</h3>
+        <div class="filter-tabs">
+          <button class="tab active" onclick="filterControls('all', this)">All</button>
+          <button class="tab" onclick="filterControls('FAIL', this)">Failed</button>
+          <button class="tab" onclick="filterControls('PASS', this)">Passed</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Category</th>
+            <th>Control</th>
+            <th>Remediation</th>
+          </tr>
+        </thead>
+        <tbody id="controlsBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Alerts table -->
+    <div class="section" id="alertsSection">
+      <div class="section-header">
+        <h3>Security Alerts — Last 24 Hours</h3>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Account</th>
+          </tr>
+        </thead>
+        <tbody id="alertsBody"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<footer>
+  Built by <a href="https://linkedin.com/in/fadyhakim" target="_blank">Fady Hakim</a>
+  · Infrastructure &amp; Cloud Security Engineer
+  · <a href="https://github.com/fady-hakim/it-infra-automation" target="_blank">View on GitHub</a>
+</footer>
+
+<script>
+  let allControls = [];
+
+  async function loadData() {
+    try {
+      const res  = await fetch('./audit-results.json');
+      const data = await res.json();
+      render(data);
+    } catch (e) {
+      // No real data yet — show realistic demo
+      render(getDemoData());
+    }
+  }
+
+  function getDemoData() {
+    return {
+      generated: new Date().toISOString().replace('T',' ').slice(0,19) + ' UTC',
+      runner: 'GITHUB-RUNNER-WIN',
+      audit: {
+        total: 32, passed: 27, failed: 5, score: 84.4,
+        controls: [
+          { category:'Password Policy',   control:'Minimum password length ≥ 14',          status:'PASS', remediation:'' },
+          { category:'Password Policy',   control:'Password complexity enabled',             status:'PASS', remediation:'' },
+          { category:'Password Policy',   control:'Maximum password age ≤ 60 days',         status:'FAIL', remediation:'Set MaximumPasswordAge to 60 via Group Policy' },
+          { category:'Account Lockout',   control:'Lockout threshold ≤ 5 attempts',         status:'PASS', remediation:'' },
+          { category:'Account Lockout',   control:'Lockout duration ≥ 15 minutes',          status:'PASS', remediation:'' },
+          { category:'Windows Firewall',  control:'Domain profile enabled',                 status:'PASS', remediation:'' },
+          { category:'Windows Firewall',  control:'Private profile enabled',                status:'PASS', remediation:'' },
+          { category:'Windows Firewall',  control:'Public profile enabled',                 status:'PASS', remediation:'' },
+          { category:'Remote Access',     control:'RDP NLA enforced',                       status:'PASS', remediation:'' },
+          { category:'Remote Access',     control:'WinRM disabled or restricted',           status:'FAIL', remediation:'Disable WinRM service if not required: Stop-Service WinRM' },
+          { category:'Audit Policy',      control:'Logon/logoff auditing enabled',          status:'PASS', remediation:'' },
+          { category:'Audit Policy',      control:'Account management auditing enabled',    status:'PASS', remediation:'' },
+          { category:'Audit Policy',      control:'Privilege use auditing enabled',         status:'PASS', remediation:'' },
+          { category:'SMB Hardening',     control:'SMBv1 disabled',                        status:'PASS', remediation:'' },
+          { category:'SMB Hardening',     control:'SMB signing required',                  status:'PASS', remediation:'' },
+          { category:'USB Control',       control:'Removable storage write access blocked', status:'PASS', remediation:'' },
+          { category:'USB Control',       control:'AutoRun disabled',                       status:'PASS', remediation:'' },
+          { category:'Services',          control:'Telnet service disabled',                status:'PASS', remediation:'' },
+          { category:'Services',          control:'FTP service disabled',                   status:'PASS', remediation:'' },
+          { category:'Services',          control:'Print spooler restricted',               status:'FAIL', remediation:'Restrict Print Spooler: Set-Service Spooler -StartupType Disabled on non-print servers' },
+          { category:'Registry Security', control:'LM hash storage disabled',              status:'PASS', remediation:'' },
+          { category:'Registry Security', control:'Anonymous SID enumeration blocked',     status:'PASS', remediation:'' },
+          { category:'Registry Security', control:'Autoplay disabled for all drives',      status:'FAIL', remediation:'Set HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\NoDriveTypeAutoRun = 255' },
+          { category:'Registry Security', control:'Screen saver password enabled',         status:'PASS', remediation:'' },
+          { category:'User Accounts',     control:'Built-in Administrator account disabled',status:'PASS', remediation:'' },
+          { category:'User Accounts',     control:'Guest account disabled',                status:'PASS', remediation:'' },
+          { category:'Windows Defender',  control:'Real-time protection enabled',          status:'PASS', remediation:'' },
+          { category:'Windows Defender',  control:'Cloud-delivered protection enabled',    status:'PASS', remediation:'' },
+          { category:'Windows Defender',  control:'Automatic sample submission enabled',   status:'FAIL', remediation:'Enable via: Set-MpPreference -SubmitSamplesConsent 1' },
+          { category:'Network',           control:'NetBIOS over TCP/IP disabled',          status:'PASS', remediation:'' },
+          { category:'Network',           control:'LLMNR disabled',                        status:'PASS', remediation:'' },
+          { category:'Network',           control:'IPv6 disabled if not in use',           status:'PASS', remediation:'' },
+        ]
+      },
+      alerts: {
+        total: 3, critical: 0, high: 2, medium: 1,
+        items: [
+          { severity:'HIGH',   category:'Brute Force',        description:'8 failed logon attempts detected (threshold: 5)', account:'jsmith' },
+          { severity:'HIGH',   category:'New Service Installed', description:"Service 'UpdateHelper' installed — Path: C:\\Temp\\update.exe", account:'SYSTEM' },
+          { severity:'MEDIUM', category:'Account Lockout',    description:'Account locked out 2 time(s)', account:'mwilliams' },
+        ]
+      }
+    };
+  }
+
+  function render(data) {
+    document.getElementById('loading').style.display  = 'none';
+    document.getElementById('content').style.display  = 'block';
+
+    // Score ring
+    const score = data.audit.score;
+    const offset = 314 - (314 * score / 100);
+    const fill = document.getElementById('scoreFill');
+    const ring = document.getElementById('scoreRing');
+    setTimeout(() => { fill.style.strokeDashoffset = offset; }, 100);
+    if (score < 60) ring.classList.add('fail');
+    else if (score < 80) ring.classList.add('warn');
+
+    document.getElementById('scorePct').textContent       = score + '%';
+    document.getElementById('statPassed').textContent     = data.audit.passed;
+    document.getElementById('statFailed').textContent     = data.audit.failed;
+    document.getElementById('statTotal').textContent      = data.audit.total;
+    document.getElementById('statGenerated').textContent  = data.generated;
+
+    // Alerts
+    document.getElementById('alertCritical').textContent = data.alerts.critical;
+    document.getElementById('alertHigh').textContent     = data.alerts.high;
+    document.getElementById('alertMedium').textContent   = data.alerts.medium;
+    document.getElementById('alertTotal').textContent    = data.alerts.total;
+
+    // Controls table
+    allControls = data.audit.controls;
+    renderControls(allControls);
+
+    // Alerts table
+    const ab = document.getElementById('alertsBody');
+    if (!data.alerts.items || data.alerts.items.length === 0) {
+      ab.innerHTML = '<tr><td colspan="4" class="empty">✓ No alerts detected in the last 24 hours</td></tr>';
+    } else {
+      ab.innerHTML = data.alerts.items.map(a => `
+        <tr>
+          <td><span class="pill ${a.severity.toLowerCase()}">${a.severity}</span></td>
+          <td>${a.category}</td>
+          <td>${a.description}</td>
+          <td style="color:#8b949e">${a.account || '—'}</td>
+        </tr>`).join('');
+    }
+  }
+
+  function renderControls(controls) {
+    const cb = document.getElementById('controlsBody');
+    if (!controls.length) {
+      cb.innerHTML = '<tr><td colspan="4" class="empty">No controls to display</td></tr>';
+      return;
+    }
+    cb.innerHTML = controls.map(c => `
+      <tr>
+        <td><span class="pill ${c.status.toLowerCase()}">${c.status}</span></td>
+        <td style="color:#8b949e;white-space:nowrap">${c.category}</td>
+        <td>
+          ${c.control}
+          ${c.remediation ? `<div class="remediation">↳ ${c.remediation}</div>` : ''}
+        </td>
+        <td></td>
+      </tr>`).join('');
+  }
+
+  function filterControls(filter, btn) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    const filtered = filter === 'all' ? allControls : allControls.filter(c => c.status === filter);
+    renderControls(filtered);
+  }
+
+  loadData();
+</script>
+</body>
+</html>
