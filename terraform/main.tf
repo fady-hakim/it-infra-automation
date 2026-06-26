@@ -110,14 +110,14 @@ resource "azurerm_subnet_network_security_group_association" "main" {
 ###############################################################################
 
 resource "azurerm_key_vault" "main" {
-  name                        = "kv-${var.environment}-${random_string.kv_suffix.result}"
-  location                    = azurerm_resource_group.main.location
-  resource_group_name         = azurerm_resource_group.main.name
-  tenant_id                   = data.azurerm_client_config.current.tenant_id
-  sku_name                    = "standard"
-  soft_delete_retention_days  = 7
-  purge_protection_enabled    = true
-  enable_rbac_authorization   = true
+  name                       = "kv-${var.environment}-${random_string.kv_suffix.result}"
+  location                   = azurerm_resource_group.main.location
+  resource_group_name        = azurerm_resource_group.main.name
+  tenant_id                  = data.azurerm_client_config.current.tenant_id
+  sku_name                   = "standard"
+  soft_delete_retention_days = 7
+  purge_protection_enabled   = true
+  enable_rbac_authorization  = true
 
   network_acls {
     default_action = "Deny"

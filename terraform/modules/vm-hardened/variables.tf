@@ -2,11 +2,11 @@
 # modules/vm-hardened/variables.tf
 ###############################################################################
 
-variable "name"                { type = string }
+variable "name" { type = string }
 variable "resource_group_name" { type = string }
-variable "location"            { type = string }
-variable "subnet_id"           { type = string }
-variable "admin_username"      { type = string }
+variable "location" { type = string }
+variable "subnet_id" { type = string }
+variable "admin_username" { type = string }
 variable "storage_account_uri" { type = string }
 
 variable "vm_size" {

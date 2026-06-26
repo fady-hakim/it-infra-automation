@@ -110,15 +110,15 @@ resource "azurerm_network_security_group" "main" {
   tags = var.tags
 }
 
-variable "name"                { type = string }
+variable "name" { type = string }
 variable "resource_group_name" { type = string }
-variable "location"            { type = string }
-variable "allowed_ssh_cidr"    { type = string }
+variable "location" { type = string }
+variable "allowed_ssh_cidr" { type = string }
 
 variable "tags" {
   type    = map(string)
   default = {}
 }
 
-output "nsg_id"   { value = azurerm_network_security_group.main.id }
+output "nsg_id" { value = azurerm_network_security_group.main.id }
 output "nsg_name" { value = azurerm_network_security_group.main.name }

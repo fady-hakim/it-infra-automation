@@ -53,7 +53,7 @@ resource "azurerm_linux_virtual_machine" "main" {
     disk_size_gb         = var.os_disk_size_gb
 
     # Encrypt at rest
-    secure_vm_disk_encryption_set_id = null  # Platform-managed key default
+    secure_vm_disk_encryption_set_id = null # Platform-managed key default
   }
 
   source_image_reference {
