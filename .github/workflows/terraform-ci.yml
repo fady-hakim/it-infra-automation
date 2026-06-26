@@ -1,0 +1,168 @@
+###############################################################################
+# .github/workflows/terraform-ci.yml
+#
+# CI pipeline: runs on every push and PR to main
+# Steps: format check → validate → security scan (tfsec) → plan
+#
+# Requires GitHub Secrets:
+#   ARM_CLIENT_ID       - Service Principal App ID
+#   ARM_CLIENT_SECRET   - Service Principal Secret (stored in GitHub Secrets only)
+#   ARM_SUBSCRIPTION_ID - Azure Subscription ID
+#   ARM_TENANT_ID       - Azure Tenant ID
+###############################################################################
+
+name: Terraform CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/terraform-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'terraform/**'
+
+permissions:
+  contents: read
+  pull-requests: write  # Allow posting plan output as PR comment
+
+env:
+  TF_VERSION:      "1.8.0"
+  TFSEC_VERSION:   "latest"
+  WORKING_DIR:     "./terraform"
+  TF_VAR_environment: "dev"
+
+jobs:
+
+  ##############################################################################
+  # Job 1: Format check
+  ##############################################################################
+  fmt:
+    name: Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform fmt
+        id: fmt
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform fmt -check -recursive -diff
+        continue-on-error: false
+
+  ##############################################################################
+  # Job 2: Security scan (tfsec)
+  ##############################################################################
+  security:
+    name: Security Scan (tfsec)
+    runs-on: ubuntu-latest
+    needs: fmt
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: ${{ env.WORKING_DIR }}
+          soft_fail: false
+          format: lovely
+
+  ##############################################################################
+  # Job 3: Validate + Plan
+  ##############################################################################
+  plan:
+    name: Validate & Plan
+    runs-on: ubuntu-latest
+    needs: [ fmt, security ]
+
+    env:
+      ARM_CLIENT_ID:       ${{ secrets.ARM_CLIENT_ID }}
+      ARM_CLIENT_SECRET:   ${{ secrets.ARM_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID:       ${{ secrets.ARM_TENANT_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        id: init
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform init -backend=false   # No backend needed for plan in CI
+
+      - name: Terraform Validate
+        id: validate
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          terraform plan \
+            -no-color \
+            -var="environment=dev" \
+            -var="allowed_ssh_cidr=10.0.0.0/8" \
+            -out=tfplan 2>&1 | tee plan_output.txt
+        continue-on-error: true
+
+      # Post plan output as PR comment
+      - name: Post Plan to PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('${{ env.WORKING_DIR }}/plan_output.txt', 'utf8');
+            const maxLen = 60000;
+            const truncated = plan.length > maxLen
+              ? plan.substring(0, maxLen) + '\n... (truncated)'
+              : plan;
+
+            const body = `## Terraform Plan — \`${{ github.event.pull_request.head.sha }}\`
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`hcl
+            ${truncated}
+            \`\`\`
+
+            </details>
+
+            **Format**: \`${{ steps.fmt.outcome }}\`
+            **Validate**: \`${{ steps.validate.outcome }}\`
+            **Plan**: \`${{ steps.plan.outcome }}\``;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Fail if plan failed
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+      - name: Upload plan artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ github.sha }}
+          path: ${{ env.WORKING_DIR }}/tfplan
+          retention-days: 5
