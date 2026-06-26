@@ -224,4 +224,4 @@ ARM_TENANT_ID
 ## Author
 
 **Fady Hakim** — BSc Applied Cyber Security (2:1), University of South Wales  
-[LinkedIn](https://www.linkedin.com/in/fadyhakim/) · Cardiff, UK
+[LinkedIn](https://www.linkedin.com/in/fady-hakim/) · Cardiff, UK
