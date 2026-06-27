@@ -1,0 +1,55 @@
+{
+  "generated": "2026-06-27 06:00:12 UTC",
+  "runner": "GITHUB-RUNNER-WIN2022",
+  "audit": {
+    "total": 32,
+    "passed": 27,
+    "failed": 5,
+    "score": 84.4,
+    "controls": [
+      {"category":"Password Policy","control":"Minimum password length >= 14","status":"PASS","remediation":""},
+      {"category":"Password Policy","control":"Password complexity enabled","status":"PASS","remediation":""},
+      {"category":"Password Policy","control":"Maximum password age <= 60 days","status":"FAIL","remediation":"Set MaximumPasswordAge to 60 via Group Policy"},
+      {"category":"Account Lockout","control":"Lockout threshold <= 5 attempts","status":"PASS","remediation":""},
+      {"category":"Account Lockout","control":"Lockout duration >= 15 minutes","status":"PASS","remediation":""},
+      {"category":"Windows Firewall","control":"Domain profile enabled","status":"PASS","remediation":""},
+      {"category":"Windows Firewall","control":"Private profile enabled","status":"PASS","remediation":""},
+      {"category":"Windows Firewall","control":"Public profile enabled","status":"PASS","remediation":""},
+      {"category":"Remote Access","control":"RDP NLA enforced","status":"PASS","remediation":""},
+      {"category":"Remote Access","control":"WinRM disabled or restricted","status":"FAIL","remediation":"Disable WinRM: Stop-Service WinRM -Force"},
+      {"category":"Audit Policy","control":"Logon/logoff auditing enabled","status":"PASS","remediation":""},
+      {"category":"Audit Policy","control":"Account management auditing enabled","status":"PASS","remediation":""},
+      {"category":"Audit Policy","control":"Privilege use auditing enabled","status":"PASS","remediation":""},
+      {"category":"SMB Hardening","control":"SMBv1 disabled","status":"PASS","remediation":""},
+      {"category":"SMB Hardening","control":"SMB signing required","status":"PASS","remediation":""},
+      {"category":"USB Control","control":"Removable storage write access blocked","status":"PASS","remediation":""},
+      {"category":"USB Control","control":"AutoRun disabled","status":"PASS","remediation":""},
+      {"category":"Services","control":"Telnet service disabled","status":"PASS","remediation":""},
+      {"category":"Services","control":"FTP service disabled","status":"PASS","remediation":""},
+      {"category":"Services","control":"Print spooler restricted","status":"FAIL","remediation":"Set-Service Spooler -StartupType Disabled on non-print servers"},
+      {"category":"Registry Security","control":"LM hash storage disabled","status":"PASS","remediation":""},
+      {"category":"Registry Security","control":"Anonymous SID enumeration blocked","status":"PASS","remediation":""},
+      {"category":"Registry Security","control":"Autoplay disabled for all drives","status":"FAIL","remediation":"Set NoDriveTypeAutoRun = 255 via Group Policy"},
+      {"category":"Registry Security","control":"Screen saver password enabled","status":"PASS","remediation":""},
+      {"category":"User Accounts","control":"Built-in Administrator account disabled","status":"PASS","remediation":""},
+      {"category":"User Accounts","control":"Guest account disabled","status":"PASS","remediation":""},
+      {"category":"Windows Defender","control":"Real-time protection enabled","status":"PASS","remediation":""},
+      {"category":"Windows Defender","control":"Cloud-delivered protection enabled","status":"PASS","remediation":""},
+      {"category":"Windows Defender","control":"Automatic sample submission enabled","status":"FAIL","remediation":"Set-MpPreference -SubmitSamplesConsent 1"},
+      {"category":"Network","control":"NetBIOS over TCP/IP disabled","status":"PASS","remediation":""},
+      {"category":"Network","control":"LLMNR disabled","status":"PASS","remediation":""},
+      {"category":"Network","control":"IPv6 disabled if not in use","status":"PASS","remediation":""}
+    ]
+  },
+  "alerts": {
+    "total": 3,
+    "critical": 0,
+    "high": 2,
+    "medium": 1,
+    "items": [
+      {"severity":"HIGH","category":"Brute Force","description":"8 failed logon attempts detected within 10 minutes (threshold: 5)","account":"svc-backup"},
+      {"severity":"HIGH","category":"New Service Installed","description":"Service 'UpdateHelper' installed — Path: C:\\Temp\\update.exe","account":"SYSTEM"},
+      {"severity":"MEDIUM","category":"Account Lockout","description":"Account locked out 2 times in last 24 hours","account":"j.wilson"}
+    ]
+  }
+}
