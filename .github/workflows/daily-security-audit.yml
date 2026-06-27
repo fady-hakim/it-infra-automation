@@ -1,0 +1,106 @@
+name: Daily Security Audit
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  push:
+    branches: [ main ]
+    paths:
+      - 'powershell/**'
+      - 'dashboard/**'
+      - '.github/workflows/daily-security-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  security-audit:
+    name: CIS Benchmark Audit
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Security Baseline Audit
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path .\Reports -Force | Out-Null
+          .\powershell\security-baseline-audit.ps1 -OutputPath .\Reports
+        continue-on-error: true
+
+      - name: Run Event Log Monitor
+        shell: pwsh
+        run: |
+          .\powershell\eventlog-monitor.ps1 -OutputPath .\Reports -HoursBack 24
+        continue-on-error: true
+
+      - name: Generate JSON for dashboard
+        shell: pwsh
+        run: |
+          $auditFile = Get-ChildItem -Path .\Reports -Filter "security-audit-*.csv" -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          $alertFile = Get-ChildItem -Path .\Reports -Filter "eventlog-alerts-*.csv" -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          $summary = @{
+            generated = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss') + " UTC"
+            audit = @{ total=0; passed=0; failed=0; score=0; controls=@() }
+            alerts = @{ total=0; critical=0; high=0; medium=0; items=@() }
+          }
+          if ($auditFile) {
+            $d = Import-Csv $auditFile.FullName
+            $p = ($d | Where-Object { $_.Status -eq 'PASS' }).Count
+            $f = ($d | Where-Object { $_.Status -eq 'FAIL' }).Count
+            $t = $p + $f
+            $summary.audit.total = $t
+            $summary.audit.passed = $p
+            $summary.audit.failed = $f
+            $summary.audit.score = if ($t -gt 0) { [math]::Round(($p/$t)*100,1) } else { 0 }
+            $summary.audit.controls = $d | ForEach-Object { @{ category=$_.Category; control=$_.Control; status=$_.Status; remediation=$_.Remediation } }
+          }
+          if ($alertFile) {
+            $a = Import-Csv $alertFile.FullName
+            $summary.alerts.total = $a.Count
+            $summary.alerts.critical = ($a | Where-Object { $_.Severity -eq 'CRITICAL' }).Count
+            $summary.alerts.high = ($a | Where-Object { $_.Severity -eq 'HIGH' }).Count
+            $summary.alerts.medium = ($a | Where-Object { $_.Severity -eq 'MEDIUM' }).Count
+            $summary.alerts.items = $a | ForEach-Object { @{ severity=$_.Severity; category=$_.Category; description=$_.Description; account=$_.Account } }
+          }
+          $summary | ConvertTo-Json -Depth 10 | Out-File -FilePath .\dashboard\audit-results.json -Encoding UTF8
+          Write-Host "Done — Score: $($summary.audit.score)% | Alerts: $($summary.alerts.total)"
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-${{ github.run_number }}
+          path: Reports/
+          retention-days: 30
+
+      - name: Upload dashboard
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-${{ github.run_number }}
+          path: dashboard/
+
+  publish-dashboard:
+    name: Publish to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: security-audit
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download dashboard artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dashboard-${{ github.run_number }}
+          path: dashboard/
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dashboard
+          commit_message: "chore: update security dashboard [${{ github.run_number }}]"
