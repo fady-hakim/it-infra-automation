@@ -23,4 +23,4 @@ The `daily-security-audit.yml` workflow runs every day automatically on GitHub A
 ## Author
 
 **Fady Hakim** — BSc Applied Cyber Security (2:1), University of South Wales
-[LinkedIn](https://www.linkedin.com/in/fadyhakim/) · Cardiff, UK
+[LinkedIn](https://www.linkedin.com/in/fady-hakim/) · Cardiff, UK
