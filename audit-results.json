@@ -1,17 +1,17 @@
 {
-  "alerts": {
-    "critical": 0,
-    "high": 0,
-    "items": [],
-    "total": 0,
-    "medium": 0
-  },
   "audit": {
     "passed": 0,
-    "score": 0,
     "failed": 0,
-    "controls": [],
-    "total": 0
+    "total": 0,
+    "score": 0,
+    "controls": []
   },
-  "generated": "2026-09-18 11:00:39 UTC"
+  "generated": "2026-09-19 10:44:31 UTC",
+  "alerts": {
+    "items": [],
+    "high": 0,
+    "total": 0,
+    "critical": 0,
+    "medium": 0
+  }
 }
