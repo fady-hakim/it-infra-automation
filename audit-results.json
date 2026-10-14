@@ -2,16 +2,16 @@
   "alerts": {
     "medium": 0,
     "items": [],
-    "total": 0,
+    "critical": 0,
     "high": 0,
-    "critical": 0
+    "total": 0
   },
+  "generated": "2026-10-14 11:37:14 UTC",
   "audit": {
-    "controls": [],
-    "failed": 0,
-    "total": 0,
     "passed": 0,
-    "score": 0
-  },
-  "generated": "2026-10-13 14:00:35 UTC"
+    "failed": 0,
+    "controls": [],
+    "score": 0,
+    "total": 0
+  }
 }
