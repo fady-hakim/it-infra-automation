@@ -1,17 +1,17 @@
 {
-  "audit": {
-    "failed": 0,
-    "score": 0,
-    "total": 0,
-    "controls": [],
-    "passed": 0
-  },
+  "generated": "2026-10-26 12:43:07 UTC",
   "alerts": {
     "items": [],
-    "high": 0,
     "total": 0,
+    "critical": 0,
     "medium": 0,
-    "critical": 0
+    "high": 0
   },
-  "generated": "2026-10-25 11:09:26 UTC"
+  "audit": {
+    "controls": [],
+    "total": 0,
+    "score": 0,
+    "failed": 0,
+    "passed": 0
+  }
 }
